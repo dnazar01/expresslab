@@ -8,7 +8,8 @@ export default function appSrc(express, bodyParser, createReadStream, crypto, ht
 
     app.use((req, res, next) => {
         res.set('Access-Control-Allow-Origin', '*');
-        res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,OPTIONS,DELETE');
+        res.set('Access-Control-Allow-Methods', '*');
+        res.set('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers, Content-Type, x-author, ngrok-skip-browser-warning');
         next();
     });
 
@@ -18,7 +19,7 @@ export default function appSrc(express, bodyParser, createReadStream, crypto, ht
 
     app.get('/code/', (req, res) => {
         res.type('text/plain');
-        createReadStream(import.meta.url.substring(7)).pipe(res);
+        createReadStream(new URL(import.meta.url)).pipe(res);
     });
 
     app.get('/sha1/:input/', (req, res) => {
@@ -28,12 +29,12 @@ export default function appSrc(express, bodyParser, createReadStream, crypto, ht
     });
 
     app.get('/req/', (req, res) => {
-        http.get(req.query.addr, response => {
+        http.get(req.query.addr, (response) => {
             let data = '';
 
             response.setEncoding('utf8');
 
-            response.on('data', chunk => {
+            response.on('data', (chunk) => {
                 data += chunk;
             });
 
@@ -44,12 +45,12 @@ export default function appSrc(express, bodyParser, createReadStream, crypto, ht
     });
 
     app.post('/req/', (req, res) => {
-        http.get(req.body.addr || req.query.addr, response => {
+        http.get(req.body?.addr || req.query?.addr, (response) => {
             let data = '';
 
             response.setEncoding('utf8');
 
-            response.on('data', chunk => {
+            response.on('data', (chunk) => {
                 data += chunk;
             });
 
