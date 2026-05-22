@@ -3,19 +3,44 @@ const LOGIN = 'dnazar01';
 export default function appSrc(express, bodyParser, createReadStream, crypto, http) {
     const app = express();
 
+    const sendLogin = (req, res) => {
+        res.type('text/plain').send(LOGIN);
+    };
+
+    const proxyRequest = (addr, res) => {
+        http.get(addr, (response) => {
+            let result = '';
+
+            response.setEncoding('utf8');
+
+            response.on('data', (chunk) => {
+                result += chunk;
+            });
+
+            response.on('end', () => {
+                res.type('text/plain').send(result);
+            });
+        });
+    };
+
     app.use(bodyParser.urlencoded({ extended: false }));
     app.use(bodyParser.json());
 
     app.use((req, res, next) => {
-        res.set('Access-Control-Allow-Origin', '*');
-        res.set('Access-Control-Allow-Methods', '*');
-        res.set('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers, Content-Type, x-author, ngrok-skip-browser-warning');
+        const headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': '*',
+            'Access-Control-Allow-Headers': 'Access-Control-Allow-Headers, Content-Type, x-author, ngrok-skip-browser-warning',
+        };
+
+        Object.entries(headers).forEach(([name, value]) => {
+            res.set(name, value);
+        });
+
         next();
     });
 
-    app.get('/login/', (req, res) => {
-        res.type('text/plain').send(LOGIN);
-    });
+    app.get('/login/', sendLogin);
 
     app.get('/code/', (req, res) => {
         res.type('text/plain');
@@ -23,46 +48,23 @@ export default function appSrc(express, bodyParser, createReadStream, crypto, ht
     });
 
     app.get('/sha1/:input/', (req, res) => {
-        res.type('text/plain').send(
-            crypto.createHash('sha1').update(req.params.input).digest('hex')
-        );
+        const hash = crypto
+            .createHash('sha1')
+            .update(req.params.input)
+            .digest('hex');
+
+        res.type('text/plain').send(hash);
     });
 
     app.get('/req/', (req, res) => {
-        http.get(req.query.addr, (response) => {
-            let data = '';
-
-            response.setEncoding('utf8');
-
-            response.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            response.on('end', () => {
-                res.type('text/plain').send(data);
-            });
-        });
+        proxyRequest(req.query.addr, res);
     });
 
     app.post('/req/', (req, res) => {
-        http.get(req.body?.addr || req.query?.addr, (response) => {
-            let data = '';
-
-            response.setEncoding('utf8');
-
-            response.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            response.on('end', () => {
-                res.type('text/plain').send(data);
-            });
-        });
+        proxyRequest(req.body?.addr || req.query?.addr, res);
     });
 
-    app.all(/.*/, (req, res) => {
-        res.type('text/plain').send(LOGIN);
-    });
+    app.all(/.*/, sendLogin);
 
     return app;
 }
